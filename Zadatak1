@@ -1,0 +1,79 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
+using System.IO;
+
+namespace Zad1
+{
+    class TankMonitoring
+    {
+        public Tank tank;
+        public Thread thread;
+
+        /* s obzirom na to da je dogadjaj tipa TankLogHandler,
+         * treba da se napravi delegat tog tipa.
+         * Potpis delegata se zakljuci tako sto uvidi da je dogadjaj
+         * tankStatusChanged povezan sa metodom OnTankStatusChanged
+         */
+        public delegate void TankLogHandler (string msg);
+        public event TankLogHandler tankStatusChanged;
+
+        // u konstruktoru se na dogadjaj naveze metoda
+        public TankMonitoring()
+        {
+            /* ovim se metoda pretplacuje na dogadjaj, sto znaci da
+             * ce se na svaki poziv dogadjaja pozvati i 
+             * svaka od metoda koja je na njega pretplacena,
+             * a u ovom slucaju je to samo OnTankStatusChanged()
+             */
+
+            tankStatusChanged += OnTankStatusChanged;
+        }
+
+        public void Start(int milliseconds, string ime)
+        {
+            Dodatna d = new Dodatna(milliseconds, ime);
+            thread = new Thread(Simulation);
+            thread.Start(d);
+        }
+
+        public void Stop()
+        {
+            thread.Abort();
+        }
+
+        public void Simulation(object obj)
+        {
+            Dodatna d = obj as Dodatna;
+            int ms = d.Milliseconds;
+            string ime = d.Ime;
+            Console.WriteLine(ime);
+            //int ms = (int) obj;
+            while (true)
+            {
+                Thread.Sleep(ms);
+                double oldLevel = tank.level;
+                tank.level = 100 * Math.Sin((double)DateTime.Now.Second / 60 * Math.PI);
+                if (oldLevel != tank.level)
+                {
+                    tankStatusChanged($"Level in tank changed to {tank.level}");
+                    
+                }
+                
+            }
+        }
+
+        private void OnTankStatusChanged(string message)
+        {
+            Console.WriteLine(message);
+            using (StreamWriter sw = File.AppendText("tankLog.txt"))
+            {
+                //sw.Write(message);
+                sw.WriteLine(message);
+            }
+        }
+    }
+}
