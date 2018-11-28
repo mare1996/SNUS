@@ -1,0 +1,144 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Z2
+{
+    public static class StudentskaSluzba
+    {
+        public static Dictionary<Smer, List<Predmet>> smeroviSaPredmetima;
+        public static List<Student> potencijalniStudenti;
+        public static Dictionary<Smer, List<UpisaniStudent>> upisaniStudenti;
+        public static Dictionary<Smer, List<Asistent>> asistenti;
+
+        static StudentskaSluzba()
+        {
+            Smer s1 = new Smer("Smer-1");
+            Smer s2 = new Smer("Smer-2");
+            Smer s3 = new Smer("Smer-3");
+
+            smeroviSaPredmetima = new Dictionary<Smer, List<Predmet>>
+            {
+                { s1, new List<Predmet> {new Predmet("S1P1"), new Predmet("S1P2"), new Predmet("S1P3")} },
+                { s2, new List<Predmet> {new Predmet("S2P1"), new Predmet("S2P2"), new Predmet("S2P3")} },
+            };
+
+            potencijalniStudenti = new List<Student>
+            {
+                new Student("Ime1", "Prezime1", s1, 40),
+                new Student("Ime2", "Prezime2", s1, 60),
+                new Student("Ime3", "Prezime3", s1, 80),
+                new Student("Ime4", "Prezime4", s1, 100),
+                new Student("Ime5", "Prezime5", s1, 45),
+                new Student("Ime6", "Prezime6", s2, 55),
+                new Student("Ime7", "Prezime7", s2, 62),
+                new Student("Ime8", "Prezime8", s2, 60),
+                new Student("Ime9", "Prezime9", s2, 72),
+                new Student("Ime10", "Prezime10", s2, 20),
+            };
+
+            asistenti = new Dictionary<Smer, List<Asistent>>
+            {
+                {s1, new List<Asistent> { new Asistent("AIme1", "APrezime1"), new Asistent("AIme2", "APrezime2") } },
+                {s2, new List<Asistent> { new Asistent("AIme3", "APrezime3") } },
+            };
+
+            upisaniStudenti = new Dictionary<Smer, List<UpisaniStudent>>();
+        }
+
+        public static void UpisiStudenteNaSmerove()
+        {
+            var studenti_po_smeru =
+                from student in StudentskaSluzba.potencijalniStudenti 
+                orderby student.BrojBodovaSaPrijemnog descending //sortira studente po broju bodova opadajuce
+                where student.BrojBodovaSaPrijemnog > 51 // sortira samo one koji imaju vise od 51 bod
+                
+                //---------------------------------------------------------------------------------------------//
+                group student by student.Smer into g   //grupise ih  
+                select new { Smer = g.Key, Students = g.Take(3).ToList() }; // ubacuje 3 u listu
+
+            foreach (var spisak in studenti_po_smeru) {  // za svakog studenta koji je stekao uslov za upis
+                upisaniStudenti[spisak.Smer] = new List<UpisaniStudent>(); // formira novu listu 
+                foreach (Student s in spisak.Students) {  //sve studente sa liste
+                    upisaniStudenti[spisak.Smer].Add(new UpisaniStudent(s));//dodaje u listu smera
+                }
+                 //---------------------------------------------------------------------------------------------//
+            }
+        }
+
+        public static void UpisiOcenu(Smer smer, int brojIndeksa, Predmet predmet, int ocena)
+        {
+            foreach (UpisaniStudent upisaniStudent in upisaniStudenti[smer]) //za svakog studenta koji je upisan na odredjenom smeru
+                if (upisaniStudent.BrojIndeksa.Equals(brojIndeksa))// ako je to bas taj student - poredi brojeve indeksa
+                    upisaniStudent.Ocene[predmet] = ocena; //dodeljuje ocenu tom studentu
+        }
+
+        // IZVESTAJI
+
+        public static void NajboljiStudent()
+        {
+            Console.WriteLine("NAJBOLJI STUDENT JE:");
+
+            UpisaniStudent student = upisaniStudenti.Values.SelectMany(x => x).Aggregate((s1, s2) => s1.Prosek > s2.Prosek ? s1 : s2); //pojasniti malo, lici na ternary operator
+            Console.WriteLine($"Student: {student.Ime} {student.Prezime} sa prosekom: {student.Prosek:N2} ");
+        }
+
+        public static void NajboljiStudentiPoSmerovima()
+        {
+            Console.WriteLine("NAJBOLJI STUDENTI PO SMEROVIMA SU:");
+
+            var results =
+                from upisaniStudent in upisaniStudenti.Values.SelectMany(x => x).ToList()
+                group upisaniStudent by upisaniStudent.Smer into g_po_smeru
+                select new  //zasto radi select new
+                {
+                    Smer = g_po_smeru.Key,
+                    Student = g_po_smeru.First((x => x.Prosek == g_po_smeru.Max(student => student.Prosek)))
+                };
+
+            foreach (var result in results)
+            {
+                Console.WriteLine($"SMER: {result.Smer.Naziv}, STUDENT: {result.Student.Ime} {result.Student.Prezime} sa prosekom: {result.Student.Prosek:N2} ");
+            }
+        }
+
+        public static void PolozeniPredmetiPoStudentima()
+        {
+            var results =
+                from s in upisaniStudenti.Values.SelectMany(x => x).ToList()
+                group s by s into g_po_studentu
+                select new
+                {
+                    Student = g_po_studentu.Key,
+                    Polozeno = g_po_studentu.Key.Ocene.Where(x => x.Value > 5) //uzima prolazne ocene 
+                };
+
+            foreach (var par_student_polozeno in results)
+            {
+                Console.WriteLine($"STUDENT: {par_student_polozeno.Student.Ime} {par_student_polozeno.Student.Prezime} je polozio:");
+                foreach (var par_predmet_ocena in par_student_polozeno.Polozeno)
+                {
+                    Console.WriteLine($"PREDMET:  {par_predmet_ocena.Key.Naziv} sa ocenom: {par_predmet_ocena.Value}");
+                }
+            }
+
+        }
+
+        public static void StudentiSaOcenamaIznad8()
+        {
+            Console.WriteLine("STUDENTI SA SVIM OCENAMA IZNAD 8 SU:");
+
+            IEnumerable<UpisaniStudent> studenti =
+                from s in upisaniStudenti.Values.SelectMany(x => x).ToList()
+                where s.Ocene.Values.Min() >= 8
+                select s;
+
+            foreach (Student s in studenti)
+            {
+                Console.WriteLine($"Student: {s.Ime} {s.Prezime}");
+            }
+        }
+    }
+}
