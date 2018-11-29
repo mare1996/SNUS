@@ -1,0 +1,89 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Linq;
+
+namespace KOL
+{
+    public static class Obrada
+    {
+        public static Dictionary<Driver, List<Car>> vozaciIAutomobili;
+        public static List<Driver> vozaci = new List<Driver>();
+        
+
+        static Obrada()
+        {
+
+            Driver vozac1 = new Driver("Paja", 10);
+            Driver vozac2 = new Driver("Maja", 15);
+            Driver vozac3 = new Driver("Pera", 1);
+
+            vozaci.Add(vozac1);
+            vozaci.Add(vozac2);
+            vozaci.Add(vozac3);
+
+            vozaciIAutomobili = new Dictionary<Driver, List<Car>>
+           {
+               {vozac1, new List<Car>{new Car(20,"mercedes"), new Car(55,"BMW")}},
+               {vozac2, new List<Car>{new Car(5,"VW")}},
+               {vozac3, new List<Car>{new Car(1,"VW"), new Car(45,"Stojadin"),
+                   new Car(2,"Aston Martin")}}
+           };
+        }
+
+       
+        public static void NajviseIskustva()
+        {
+            Console.WriteLine("Najiskusniji vozac je:");
+            Driver najiskusniji = vozaciIAutomobili.Keys.Aggregate((d1, d2)
+               => d1.drivingExperience > d2.drivingExperience ? d1 : d2);
+
+            Console.WriteLine($"Vozac {najiskusniji.Ime} je najiskusniji!");
+        }
+
+        public static void iskustvoVeceOd10()
+        {
+            Console.WriteLine("Vozaci sa iskustvom iznad 10 godina su:");
+
+            /* kako da pristupim sada iskustvu iz klase s 
+             * obzirom da vozace nisam stavio u listu nego ih 
+             * pravio kao promenljive?
+            */ //jednostavno napravis listu i ubacis ih naknadno.
+
+            IEnumerable<Driver> iskusnidrajveri =
+            from v in vozaci
+            where v.drivingExperience >= 10
+            select v;
+
+            foreach(Driver v in iskusnidrajveri)
+            {
+                Console.WriteLine($"Vozac:{v.Ime}");
+            }
+        }
+
+        public static void starijiOd30()
+        {
+            IEnumerable<Car> matori =
+                from c in vozaciIAutomobili.Values.SelectMany(x => x).ToList()
+                where c.Years >= 30
+                select c;
+
+            foreach(Car c in matori)
+            {
+                Console.WriteLine($"Automobili stariji od 30 godina su: {c.Model}");
+            }
+            
+        }
+
+        public static void VozacAuto()
+        {
+            foreach (KeyValuePair<Driver,List<Car>> kvp in vozaciIAutomobili)
+            {
+                Console.WriteLine($"Automobil {kvp.Value} pripada vozacu {kvp.Key}");
+            }
+        }
+         
+    }
+
+    
+}
